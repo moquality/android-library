@@ -1,4 +1,4 @@
-package com.moquality.anroidtest_library;
+package com.moquality.android;
 
 import org.junit.Test;
 
