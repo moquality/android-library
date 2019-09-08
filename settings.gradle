@@ -1,0 +1,2 @@
+include ':app', ':androidtest-library'
+rootProject.name='android'
