@@ -123,7 +123,7 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private void callAppTestMethod(String method, List<Class> classArgs, List<String> stringArgs){
         if (appTestClass!=null) {
-            if (stringArgs!=null) {
+            if (stringArgs!=null && stringArgs.size()>0) {
                 Log.i(TAG, "******* METHOD = " + method + " ARGS = " + stringArgs.get(0));
             } else {
                 Log.i(TAG, "******* METHOD = " + method);
@@ -140,10 +140,10 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                         Log.i(TAG, appTestClass.getSimpleName() + " - method called = " + m.toString());
                         try {
                             String data = "";
-                            if (stringArgs != null) {
+                            if (stringArgs != null && stringArgs.size()>0) {
                                 data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
                             } else {
-                                data = m.invoke(obj).toString();
+                                data = m.invoke(obj, "").toString();
                             }
                             Log.i(TAG, "return " + data);
                         } catch (NullPointerException e) {
