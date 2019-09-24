@@ -143,7 +143,7 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                             if (stringArgs != null && stringArgs.size()>0) {
                                 data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
                             } else {
-                                data = m.invoke(obj, "").toString();
+                                data = m.invoke(obj).toString();
                             }
                             Log.i(TAG, "return " + data);
                         } catch (NullPointerException e) {
