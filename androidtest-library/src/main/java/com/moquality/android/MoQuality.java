@@ -123,17 +123,32 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private void callAppTestMethod(String method, List<Class> classArgs, List<String> stringArgs){
         if (appTestClass!=null) {
-            Log.i(TAG, "******* METHOD = " + method + " ARGS = " + stringArgs.get(0) );
+            if (stringArgs!=null) {
+                Log.i(TAG, "******* METHOD = " + method + " ARGS = " + stringArgs.get(0));
+            } else {
+                Log.i(TAG, "******* METHOD = " + method);
+            }
             if (method.equalsIgnoreCase("setMode")){
-                setMode(stringArgs.get(0));
+                if (stringArgs!=null) {
+                    setMode(stringArgs.get(0));
+                }
             } else {
                 try {
                     Method m = appTestClass.getMethod(method, classArgs.toArray(new Class[0]));
 
                     try {
                         Log.i(TAG, appTestClass.getSimpleName() + " - method called = " + m.toString());
-                        String data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
-                        Log.i(TAG, "return " + data);
+                        try {
+                            String data = "";
+                            if (stringArgs != null) {
+                                data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
+                            } else {
+                                data = m.invoke(obj).toString();
+                            }
+                            Log.i(TAG, "return " + data);
+                        } catch (NullPointerException e) {
+                            Log.i(TAG, "Error returning data from method invoke()");
+                        }
                     } catch (IllegalAccessException e) {
                         Log.i(TAG, method + " invoke error - Illegal Access Exception");
                     } catch (InvocationTargetException e) {
