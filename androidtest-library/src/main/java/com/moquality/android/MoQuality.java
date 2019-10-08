@@ -19,7 +19,7 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private SocketIOHandlerThread mHandlerThread;
 
-    private ArrayList<Class<?>> appTests = new ArrayList<Class<?>>();
+    private ArrayList<Class<?>> appTests = new ArrayList<>();
 
     public int log(String message) {
         Log.i(TAG, message);
@@ -63,7 +63,6 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
             }
 
             Log.i("SOCKET_IO THREAD", "Execution time = " + executionTimeInMillis/1000 + " seconds");
-            //Thread.sleep(5000);
         } catch (Exception e) {
             Log.d("SOCKET IO", "Test interrupted");
         }
@@ -145,10 +144,11 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                             Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
                             try {
                                 String data = "";
+                                Object obj = testClass;
                                 if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
+                                    data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
                                 } else {
-                                    data = m.invoke(testClass, "").toString();
+                                    data = m.invoke(obj, "").toString();
                                 }
                                 Log.i(TAG, "return " + data);
                             } catch (NullPointerException e) {
