@@ -5,8 +5,6 @@ import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
 
-import com.moquality.android.TestConstants;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -140,14 +138,10 @@ class SocketIOHandlerThread extends HandlerThread {
         public void call(Object... args) {
             Log.i("SOCKET_EVENT", "received call command");
             String command = args[0].toString();
-            //if (deviceId.equalsIgnoreCase("device1")) {
-            //    botMode = TestConstants.REFLECT_MODE;
-            //}
             Log.i("call", command + " bot mode = " + botMode);
 
             try {
                 JSONObject obj = new JSONObject(command);
-
                 String targetDeviceId = obj.getString("deviceId");
                 if(deviceId.equals(targetDeviceId)) {
 
@@ -192,7 +186,6 @@ class SocketIOHandlerThread extends HandlerThread {
                         msg.put("result", "OK");
 
                         Log.i(TAG, "REFLECTING MESSAGE ***********************");
-                        //msg.put("return", "{}");
                         mCallback.onSocketEventReceived(TestConstants.SOCKET_EVENT_CALL, cmd, classArgs, stringArgs);
                         socket.emit("return", msg.toString());
                     } else {
@@ -216,11 +209,6 @@ class SocketIOHandlerThread extends HandlerThread {
         mWorkerHandler = new Handler(getLooper(), new Handler.Callback() {
             @Override
             public boolean handleMessage(Message msg) {
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 handleRequest(msg.what);
                 return true;
             }
@@ -232,12 +220,6 @@ class SocketIOHandlerThread extends HandlerThread {
     private void handleRequest(final int taskId) {
         switch(taskId){
             case TestConstants.SOCKET_IO_START:
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e){
-                    Log.e("SOCKET_IO_START", "Thread interrupted");
-                }
-
                 Log.i("SOCKET_EVENT", "STARTING");
                 isAlive = true;
                 try {
@@ -279,8 +261,6 @@ class SocketIOHandlerThread extends HandlerThread {
 
                 break;
             case TestConstants.SOCKET_IO_STOP:
-                try {
-                    Thread.sleep(1000);
                     socket.disconnect();
                     isAlive= false;
                     isConnected=false;
@@ -301,10 +281,6 @@ class SocketIOHandlerThread extends HandlerThread {
                     socket.off(Socket.EVENT_RECONNECT_ERROR,onReconnectError);
                     socket.off(Socket.EVENT_RECONNECT_FAILED, onReconnectError);
                     socket.off(Socket.EVENT_RECONNECT_ATTEMPT, onReconnect);
-                } catch (InterruptedException e) {
-                    Log.i("SOCKET_IO_STOP", "Thread interrupted");
-                }
-
                 break;
             default:
                 break;

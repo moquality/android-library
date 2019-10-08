@@ -10,27 +10,24 @@ import androidx.test.runner.screenshot.Screenshot;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
-
-import static android.content.ContentValues.TAG;
 
 public class MoQuality implements SocketIOHandlerThread.Callback {
 
-    public static String TAG = "MQ";
+    private static String TAG = "MQ";
 
     private SocketIOHandlerThread mHandlerThread;
 
-    private Object obj;
-    private Class<?> appTestClass;
+    private ArrayList<Class<?>> appTests = new ArrayList<Class<?>>();
 
     public int log(String message) {
         Log.i(TAG, message);
         return 0;
     }
 
-    public void register( Object obj, String deviceId) {
-        this.obj = obj;
-        this.appTestClass = obj.getClass();
+    public void register(Class test, String deviceId) {
+        this.appTests.add(test);
 
         // launch Socket IO chat thread
         if (Looper.myLooper() == null) {
@@ -39,7 +36,14 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         mHandlerThread = new SocketIOHandlerThread(this, deviceId);
         mHandlerThread.start();
         mHandlerThread.prepareHandler();
-        //Looper.loop();
+    }
+
+    public void unregister(Class test){
+        for (Class<?> testClass:appTests) {
+            if (testClass.getSimpleName().equalsIgnoreCase(test.getSimpleName())){
+                appTests.remove(testClass);
+            }
+        }
     }
 
     public void shutdown() {
@@ -105,7 +109,6 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
     }
 
     private void setMode(String mode) {
-
         switch (mode) {
             case "reflect":
                 mHandlerThread.queueTask(TestConstants.REFLECT_MODE);
@@ -122,7 +125,9 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
     }
 
     private void callAppTestMethod(String method, List<Class> classArgs, List<String> stringArgs){
-        if (appTestClass!=null) {
+        Object obj;
+        if (appTests!=null) {
+
             if (stringArgs!=null && stringArgs.size()>0) {
                 Log.i(TAG, "******* METHOD = " + method + " ARGS = " + stringArgs.get(0));
             } else {
@@ -133,29 +138,32 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                     setMode(stringArgs.get(0));
                 }
             } else {
-                try {
-                    Method m = appTestClass.getMethod(method, classArgs.toArray(new Class[0]));
-
+                for (Class<?> testClass:appTests) {
                     try {
-                        Log.i(TAG, appTestClass.getSimpleName() + " - method called = " + m.toString());
+                        obj= testClass;
+                        Method m = testClass.getMethod(method, classArgs.toArray(new Class[0]));
+
                         try {
-                            String data = "";
-                            if (stringArgs != null && stringArgs.size()>0) {
-                                data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
-                            } else {
-                                data = m.invoke(obj).toString();
+                            Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
+                            try {
+                                String data = "";
+                                if (stringArgs != null && stringArgs.size() > 0) {
+                                    data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
+                                } else {
+                                    data = m.invoke(obj, "").toString();
+                                }
+                                Log.i(TAG, "return " + data);
+                            } catch (NullPointerException e) {
+                                Log.i(TAG, "Error returning data from method invoke()");
                             }
-                            Log.i(TAG, "return " + data);
-                        } catch (NullPointerException e) {
-                            Log.i(TAG, "Error returning data from method invoke()");
+                        } catch (IllegalAccessException e) {
+                            Log.i(TAG, method + " invoke error - Illegal Access Exception");
+                        } catch (InvocationTargetException e) {
+                            Log.i(TAG, method + " invoke error - Invocation Target Exception");
                         }
-                    } catch (IllegalAccessException e) {
-                        Log.i(TAG, method + " invoke error - Illegal Access Exception");
-                    } catch (InvocationTargetException e) {
-                        Log.i(TAG, method + " invoke error - Invocation Target Exception");
+                    } catch (NoSuchMethodException e) {
+                        Log.i(TAG, "Method (" + method + ") not found in app test.");
                     }
-                } catch (NoSuchMethodException e) {
-                    Log.i(TAG, "Method (" + method + ") not found in app test.");
                 }
             }
         }

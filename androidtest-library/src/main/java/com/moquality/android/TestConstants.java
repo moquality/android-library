@@ -18,7 +18,6 @@ public class TestConstants {
     static final int DEFAULT_MODE = 0;
     static final int REFLECT_MODE = 1;
 
-    static final String CHAT_SERVER_URL = "https://sio.moquality.com"; //http://localhost:4000";
-    //static final String CHAT_SERVER_URL = "http://localhost:4000";
+    static final String CHAT_SERVER_URL = "https://sio.moquality.com";
     static final String SOCKET_IO_NAMESPACE = "/connect/default";
 }
