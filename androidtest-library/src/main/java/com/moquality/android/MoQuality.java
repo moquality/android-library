@@ -144,11 +144,10 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                             Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
                             try {
                                 String data = "";
-                                Object obj = testClass;
                                 if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
+                                    data = m.invoke(testClass.getClass(), stringArgs.toArray(new String[0])).toString();
                                 } else {
-                                    data = m.invoke(obj, "").toString();
+                                    data = m.invoke(testClass.getClass(), "").toString();
                                 }
                                 Log.i(TAG, "return " + data);
                             } catch (NullPointerException e) {
