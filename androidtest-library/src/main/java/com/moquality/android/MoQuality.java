@@ -1,5 +1,6 @@
 package com.moquality.android;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Looper;
 import android.util.Log;
@@ -8,6 +9,7 @@ import androidx.test.runner.screenshot.ScreenCapture;
 import androidx.test.runner.screenshot.Screenshot;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -16,6 +18,8 @@ import java.util.List;
 public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private static String TAG = "MQ";
+
+    private Context context;
 
     private SocketIOHandlerThread mHandlerThread;
 
@@ -26,8 +30,9 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         return 0;
     }
 
-    public void register(Class test, String deviceId) {
+    public void register(Class test, String deviceId, Context context) {
         this.appTests.add(test);
+        this.context = context;
 
         // launch Socket IO chat thread
         if (Looper.myLooper() == null) {
@@ -140,14 +145,26 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                     try {
                         Method m = testClass.getMethod(method, classArgs.toArray(new Class[0]));
 
+                        // because of:
+                        // https://docs.oracle.com/javase/tutorial/reflect/member/ctorInstance.html
+                        Constructor<?>[] constructors = testClass.getDeclaredConstructors();
+                        Constructor<?> constructor = null;
+                        for (int i = 0; i < constructors.length; i++) {
+                            constructor = constructors[i];
+                            if (constructor.getGenericParameterTypes().length == 0)
+                                break;
+                        }
+                        constructor.setAccessible(true);
+                        Object invokeClass = constructor.newInstance(context, true);
+
                         try {
                             Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
                             try {
                                 String data = "";
                                 if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(testClass.getClass(), stringArgs.toArray(new String[0])).toString();
+                                    data = m.invoke(invokeClass, stringArgs.toArray(new String[0])).toString();
                                 } else {
-                                    data = m.invoke(testClass.getClass(), "").toString();
+                                    data = m.invoke(invokeClass, "").toString();
                                 }
                                 Log.i(TAG, "return " + data);
                             } catch (NullPointerException e) {
@@ -160,6 +177,14 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                         }
                     } catch (NoSuchMethodException e) {
                         Log.i(TAG, "Method (" + method + ") not found in app test.");
+                    } catch (NullPointerException e){
+                        Log.i(TAG, "Null pointer exception on class constructor.");
+                    } catch (IllegalAccessException e){
+                        Log.i(TAG, "Illegal access exception exception on class constructor.");
+                    } catch (InstantiationException e){
+                        Log.i(TAG, "Instantian exception on class constructor.");
+                    } catch (InvocationTargetException e){
+                        Log.i(TAG, "Invocation target exception on class constructor.");
                     }
                 }
             }
