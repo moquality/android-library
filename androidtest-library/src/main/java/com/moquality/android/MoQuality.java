@@ -19,8 +19,6 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private static String TAG = "MQ";
 
-    private Context context;
-
     private SocketIOHandlerThread mHandlerThread;
 
     private ArrayList<Class<?>> appTests = new ArrayList<>();
@@ -30,9 +28,8 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         return 0;
     }
 
-    public void register(Class test, String deviceId, Context context) {
+    public void register(Class test, String deviceId) {
         this.appTests.add(test);
-        this.context = context;
 
         // launch Socket IO chat thread
         if (Looper.myLooper() == null) {
@@ -155,7 +152,7 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                                 break;
                         }
                         constructor.setAccessible(true);
-                        Object invokeClass = constructor.newInstance(context, true);
+                        Object invokeClass = constructor.newInstance();
 
                         try {
                             Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
