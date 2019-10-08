@@ -138,18 +138,18 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                     setMode(stringArgs.get(0));
                 }
             } else {
-                for (Class<?> testClass:appTests) {
+                for (Object testClass:appTests) {
                     try {
-                        Method m = testClass.getMethod(method, classArgs.toArray(new Class[0]));
+                        Method m = testClass.getClass().getMethod(method, classArgs.toArray(new Class[0]));
 
                         try {
-                            Log.i(TAG, testClass.getSimpleName() + " - method called = " + m.toString());
+                            Log.i(TAG, testClass.getClass().getSimpleName() + " - method called = " + m.toString());
                             try {
                                 String data = "";
                                 if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(testClass.newInstance(), stringArgs.toArray(new String[0])).toString();
+                                    data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
                                 } else {
-                                    data = m.invoke(testClass.newInstance(), "").toString();
+                                    data = m.invoke(testClass).toString();
                                 }
                                 Log.i(TAG, "return " + data);
                             } catch (NullPointerException e) {
@@ -161,11 +161,9 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                             Log.i(TAG, method + " invoke error - Invocation Target Exception");
                         }
                     } catch (NoSuchMethodException e) {
-                        Log.i(TAG, "Method (" + method + ") not found in app test.");
+                        Log.i(TAG, "Method (" + method + ") not found in app test class " + testClass.getClass().getSimpleName());
                     } catch (NullPointerException e){
                         Log.i(TAG, "Null pointer exception on class constructor.");
-                    } catch (InstantiationException e) {
-                        Log.i(TAG, "Instantiation exception on class invoke.");
                     }
                 }
             }
