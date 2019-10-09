@@ -1,6 +1,5 @@
 package com.moquality.android;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Looper;
 import android.util.Log;
@@ -9,7 +8,6 @@ import androidx.test.runner.screenshot.ScreenCapture;
 import androidx.test.runner.screenshot.Screenshot;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -21,14 +19,14 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
 
     private SocketIOHandlerThread mHandlerThread;
 
-    private ArrayList<Class<?>> appTests = new ArrayList<>();
+    private ArrayList<Object> appTests = new ArrayList<>();
 
     public int log(String message) {
         Log.i(TAG, message);
         return 0;
     }
 
-    public void register(Class test, String deviceId) {
+    public void register(Object test, String deviceId) {
         this.appTests.add(test);
 
         // launch Socket IO chat thread
@@ -41,8 +39,8 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
     }
 
     public void unregister(Class test){
-        for (Class<?> testClass:appTests) {
-            if (testClass.getSimpleName().equalsIgnoreCase(test.getSimpleName())){
+        for (Object testClass:appTests) {
+            if (testClass.getClass().getSimpleName().equalsIgnoreCase(test.getSimpleName())){
                 appTests.remove(testClass);
             }
         }
@@ -138,25 +136,21 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                     setMode(stringArgs.get(0));
                 }
             } else {
-                for (Class<?> testClass:appTests) {
+                for (Object testClass:appTests) {
                     try {
                         Method m = testClass.getClass().getMethod(method, classArgs.toArray(new Class[0]));
 
                         try {
                             Log.i(TAG, testClass.getClass().getSimpleName() + " - method called = " + m.toString());
-                                Object obj = testClass.newInstance();
                                 String data = "";
                                 if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(obj, stringArgs.toArray(new String[0])).toString();
+                                    data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
                                 } else {
-                                    data = m.invoke(obj).toString();
+                                    data = m.invoke(testClass).toString();
                                 }
                                 Log.i(TAG, "return " + data);
                         } catch (NullPointerException e) {
                             Log.i(TAG, "Error returning data from method invoke()");
-                        } catch (InstantiationException e){
-                            Log.i(TAG, method + " invoke error - Instantiation Exception");
-
                         } catch (IllegalAccessException e) {
                             Log.i(TAG, method + " invoke error - Illegal Access Exception");
                         } catch (InvocationTargetException e) {
