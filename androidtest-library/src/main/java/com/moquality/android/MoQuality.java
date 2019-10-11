@@ -26,9 +26,7 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         return 0;
     }
 
-    public void register(Object test, String deviceId) {
-        this.appTests.add(test);
-
+    public void init(String deviceId) {
         // launch Socket IO chat thread
         if (Looper.myLooper() == null) {
             Looper.prepare();
@@ -38,9 +36,13 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         mHandlerThread.prepareHandler();
     }
 
-    public void unregister(Class test){
+    public void register(Object test) {
+        this.appTests.add(test);
+    }
+
+    public void unregister(Object test){
         for (Object testClass:appTests) {
-            if (testClass.getClass().getSimpleName().equalsIgnoreCase(test.getSimpleName())){
+            if (testClass.getClass().getSimpleName().equalsIgnoreCase(test.getClass().getSimpleName())){
                 appTests.remove(testClass);
             }
         }
@@ -107,6 +109,12 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
         }
     }
 
+    @Override
+    public void onSocketEventReceived(String eventName, String className, String method, List<Class> classArgs, List<String> stringArgs) {
+        Log.i(TAG, "CALL specific test class for this device.");
+        callAppTestMethod(className, method, classArgs, stringArgs);
+    }
+
     private void setMode(String mode) {
         switch (mode) {
             case "reflect":
@@ -119,7 +127,6 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                 break;
             default:
                 Log.i(TAG, "Unhandled mode " + mode);
-                //mHandlerThread.queueTask(TestConstants.DEFAULT_MODE);
         }
     }
 
@@ -136,19 +143,20 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                     setMode(stringArgs.get(0));
                 }
             } else {
-                for (Object testClass:appTests) {
+                for (Object testClass : appTests) {
+                    // this should run all methods that match the specified method on all registered classes
                     try {
                         Method m = testClass.getClass().getMethod(method, classArgs.toArray(new Class[0]));
 
                         try {
                             Log.i(TAG, testClass.getClass().getSimpleName() + " - method called = " + m.toString());
-                                String data = "";
-                                if (stringArgs != null && stringArgs.size() > 0) {
-                                    data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
-                                } else {
-                                    data = m.invoke(testClass).toString();
-                                }
-                                Log.i(TAG, "return " + data);
+                            String data = "";
+                            if (stringArgs != null && stringArgs.size() > 0) {
+                                data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
+                            } else {
+                                data = m.invoke(testClass).toString();
+                            }
+                            Log.i(TAG, "return " + data);
                         } catch (NullPointerException e) {
                             Log.i(TAG, "Error returning data from method invoke()");
                         } catch (IllegalAccessException e) {
@@ -158,8 +166,53 @@ public class MoQuality implements SocketIOHandlerThread.Callback {
                         }
                     } catch (NoSuchMethodException e) {
                         Log.i(TAG, "Method (" + method + ") not found in app test class " + testClass.getClass().getSimpleName());
-                    } catch (NullPointerException e){
+                    } catch (NullPointerException e) {
                         Log.i(TAG, "Null pointer exception on class constructor.");
+                    }
+                }
+            }
+        }
+    }
+
+    private void callAppTestMethod(String className, String method, List<Class> classArgs, List<String> stringArgs){
+        if (appTests!=null) {
+            if (stringArgs!=null && stringArgs.size()>0) {
+                Log.i(TAG, "******* METHOD = " + method + " ARGS = " + stringArgs.get(0));
+            } else {
+                Log.i(TAG, "******* METHOD = " + method);
+            }
+            if (method.equalsIgnoreCase("setMode")){
+                if (stringArgs!=null) {
+                    setMode(stringArgs.get(0));
+                }
+            } else {
+                for (Object testClass : appTests) {
+                    if (className.equalsIgnoreCase((testClass.getClass().getSimpleName()))) {
+                        try {
+                            Method m = testClass.getClass().getMethod(method, classArgs.toArray(new Class[0]));
+
+                            try {
+                                Log.i(TAG, testClass.getClass().getSimpleName() + " - method called = " + m.toString());
+                                String data = "";
+                                if (stringArgs != null && stringArgs.size() > 0) {
+                                    data = m.invoke(testClass, stringArgs.toArray(new String[0])).toString();
+                                } else {
+                                    data = m.invoke(testClass).toString();
+                                }
+                                Log.i(TAG, "return " + data);
+                            } catch (NullPointerException e) {
+                                Log.i(TAG, "Error returning data from method invoke()");
+                            } catch (IllegalAccessException e) {
+                                Log.i(TAG, method + " invoke error - Illegal Access Exception");
+                            } catch (InvocationTargetException e) {
+                                Log.i(TAG, method + " invoke error - Invocation Target Exception");
+                            }
+                        } catch (NoSuchMethodException e) {
+                            Log.i(TAG, "Method (" + method + ") not found in app test class " + testClass.getClass().getSimpleName());
+                        } catch (NullPointerException e) {
+                            Log.i(TAG, "Null pointer exception on class constructor.");
+                        }
+                        break;
                     }
                 }
             }

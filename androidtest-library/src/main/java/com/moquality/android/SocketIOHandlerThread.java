@@ -32,6 +32,7 @@ class SocketIOHandlerThread extends HandlerThread {
     public interface Callback {
         void onSocketTaskCompleted(int taskId);
         void onSocketEventReceived(String eventName, String method, List<Class> classArgs, List<String> stringArgs);
+        void onSocketEventReceived(String eventName, String className, String method, List<Class> classArgs, List<String> stringArgs);
     }
 
     SocketIOHandlerThread(Callback callback, String deviceId) {
@@ -145,6 +146,8 @@ class SocketIOHandlerThread extends HandlerThread {
                 String targetDeviceId = obj.getString("deviceId");
                 if(deviceId.equals(targetDeviceId)) {
 
+                    String className = obj.get("class").toString();
+
                     String cmd = obj.get("cmd").toString();
                     JSONArray cmdArgs = obj.getJSONArray("args");
 
@@ -164,7 +167,11 @@ class SocketIOHandlerThread extends HandlerThread {
                     msg.put("type", obj.getString("type"));
                     msg.put("result", "OK");
 
-                    mCallback.onSocketEventReceived(TestConstants.SOCKET_EVENT_CALL, cmd, classArgs, stringArgs);
+                    if (className.length()>0) {
+                        mCallback.onSocketEventReceived(TestConstants.SOCKET_EVENT_CALL, className, cmd, classArgs, stringArgs);
+                    }  else {
+                        mCallback.onSocketEventReceived(TestConstants.SOCKET_EVENT_CALL, cmd, classArgs, stringArgs);
+                    }
                     socket.emit("return", msg.toString());
                 } else {
                     if(botMode == TestConstants.REFLECT_MODE ){
