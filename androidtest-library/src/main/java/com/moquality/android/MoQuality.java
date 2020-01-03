@@ -154,8 +154,11 @@ public class MoQuality {
         }
         List<String> mSignature = new ArrayList<>();
         mSignature.add(method);
-        String[] params = pageMethods.get(method).get("params").split(",");
-        mSignature.addAll(Arrays.asList(params));
+        String pageMethodStr = pageMethods.get(method).get("params");
+        if(pageMethodStr !=null && !pageMethodStr.isEmpty()) {
+            String[] params = pageMethodStr.split(",");
+            mSignature.addAll(Arrays.asList(params));
+        }
 
         return mSignature;
     }
