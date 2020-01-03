@@ -12,6 +12,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -146,8 +147,9 @@ public class MoQuality {
         Set<String> methods = pageMethods.keySet();
         int i = new Random().nextInt(methods.size());
         String method = null;
+        Iterator<String> it = methods.iterator();
         while(i>=0){
-            method = methods.iterator().next();
+            method = it.next();
             i--;
         }
         List<String> mSignature = new ArrayList<>();
