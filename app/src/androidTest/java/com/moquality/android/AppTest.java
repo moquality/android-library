@@ -2,7 +2,7 @@ package com.moquality.android;
 
 import androidx.test.filters.LargeTest;
 import androidx.test.rule.ActivityTestRule;
-import androidx.test.runner.AndroidJUnit4;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
@@ -27,7 +27,7 @@ public class AppTest {
     public ActivityTestRule<MainActivity> activityRule
             = new ActivityTestRule<>(MainActivity.class);
 
-    public MoQuality mq = new MoQuality();
+    private MoQuality mq = MoQuality.get();
 
     @Test
     public void clickButtonTest() throws IOException {

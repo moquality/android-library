@@ -2,9 +2,8 @@ package com.moquality.android;
 
 import android.content.Context;
 
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
-//import androidx.test.ext.junit.runners.AndroidJUnit4;
-import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,7 +27,7 @@ public class ExampleInstrumentedTest {
 
     @Test
     public void testMQLog() {
-        MoQuality mq = new MoQuality();
+        MoQuality mq = MoQuality.get();
         int ret = mq.log("Hello MoQuality");
         assertEquals(ret, 0);
     }
