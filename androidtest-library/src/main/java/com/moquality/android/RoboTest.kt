@@ -3,6 +3,7 @@ package com.moquality.android
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.math.floor
@@ -33,7 +34,7 @@ internal fun generateArgs(params: Array<Model.Method.Param>) = Arrays.stream(par
 
 internal fun selectMethod(methods: Map<String, Model.Method>): String {
     val methodList = methods.entries.flatMap { e -> arrayOfNulls<String>(e.value.weight).map { e.key } }
-    return methodList[floor(Math.random() * methods.size).toInt()]
+    return methodList[floor(Math.random() * methodList.size).toInt()]
 }
 
 class RoboTest(private val config: RoboConfig) {
@@ -64,8 +65,14 @@ class RoboTest(private val config: RoboConfig) {
                     ?: error("Couldn't find $currentPageName.$selected")
             val args = generateArgs(methods.getValue(selected).params)
 
-            Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
-            currentPage = next.invoke(currentPage, *args)
+            try {
+                Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
+                currentPage = next(currentPage, *args)
+            } catch (err: InvocationTargetException) {
+                // TODO: Collect information about test state during errors.
+                System.err.println(err.targetException.message)
+                err.targetException.printStackTrace()
+            }
         }
     }
 }
