@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-android'
 
 //apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven-publish' // Apply this plugin at the top of your library build.gradle
@@ -32,6 +34,9 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
 
     implementation 'androidx.test:runner:1.2.0'
+    implementation "androidx.core:core-ktx:+"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'com.google.code.gson:gson:2.8.6'
 //    implementation 'androidx.test.espresso:espresso-core:3.2.0'
 }
 
@@ -74,4 +79,7 @@ publishing {
             }
         }
     }
+}
+repositories {
+    mavenCentral()
 }
