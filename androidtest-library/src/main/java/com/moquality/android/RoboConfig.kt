@@ -1,21 +1,17 @@
 package com.moquality.android
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Modifier
 import java.util.*
 import kotlin.collections.HashMap
 
-@RequiresApi(Build.VERSION_CODES.N)
 fun genModels(target: Class<*>): Map<String, Model> {
     val models = java.util.HashMap<String, Model>()
     genModels(models, target, HashSet())
     return models
 }
 
-@RequiresApi(Build.VERSION_CODES.N)
 fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: MutableSet<Class<*>>) {
     if (visited.contains(target)) {
         return
@@ -28,9 +24,7 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
                     .filter { it.modifiers and Modifier.STATIC == 0 }
                     .map { m ->
                         val method = Model.Method(
-                                params = Arrays.stream(m.parameterTypes)
-                                        .map { Model.Method.Param(type = it.name) }
-                                        .toArray { arrayOfNulls<Model.Method.Param>(it) },
+                                params = m.parameterTypes.map { Model.Method.Param(type = it.name) }.toTypedArray(),
 
                                 returns = m.returnType.simpleName
                         )

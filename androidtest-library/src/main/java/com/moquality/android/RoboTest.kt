@@ -1,16 +1,11 @@
 package com.moquality.android
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import java.lang.reflect.InvocationTargetException
-import java.util.*
-import kotlin.collections.HashMap
 import kotlin.math.floor
 
 const val TAG = "MQ ROBO"
 
-@RequiresApi(Build.VERSION_CODES.O)
 internal fun generateArgs(params: Array<Model.Method.Param>) = params.map {
     if (it.valid != null && it.valid!!.isNotEmpty()) {
         val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
@@ -22,15 +17,16 @@ internal fun generateArgs(params: Array<Model.Method.Param>) = params.map {
 
     when (it.type) {
         "int" -> (Math.random() * 10000).toInt()
-        "java.lang.String" -> String(Base64.getEncoder().encode(
+        "java.lang.String" -> toPrintable(
                 ByteArray((Math.random() * 512).toInt()) {
                     floor(Math.random() * 256).toByte()
                 })
-        )
 
         else -> error("Unknown argument type: $it")
     }
 }.toTypedArray()
+
+internal fun toPrintable(bytes: ByteArray) = bytes.asSequence().map { ((it % (126 - 32)) + 32).toChar() }.joinToString("")
 
 internal fun selectMethod(methods: Map<String, Model.Method>): String {
     val methodList = methods.entries.flatMap {
@@ -63,7 +59,6 @@ class RoboTest(private val config: RoboConfig) {
         return this
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun run(start: String, count: Int = 1000) {
         repeatWithVal(count, pages[start]) { currentPage ->
             if (currentPage == null) {
