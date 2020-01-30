@@ -11,7 +11,7 @@ import kotlin.math.floor
 const val TAG = "MQ ROBO"
 
 @RequiresApi(Build.VERSION_CODES.O)
-internal fun generateArgs(params: Array<Model.Method.Param>) = Arrays.stream(params).map {
+internal fun generateArgs(params: Array<Model.Method.Param>) = params.map {
     if (it.valid != null && it.valid!!.isNotEmpty()) {
         val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
         return@map when (it.type) {
@@ -30,11 +30,29 @@ internal fun generateArgs(params: Array<Model.Method.Param>) = Arrays.stream(par
 
         else -> error("Unknown argument type: $it")
     }
-}.toArray()
+}.toTypedArray()
 
 internal fun selectMethod(methods: Map<String, Model.Method>): String {
-    val methodList = methods.entries.flatMap { e -> arrayOfNulls<String>(e.value.weight).map { e.key } }
+    val methodList = methods.entries.flatMap {
+        arrayOf(it.key).asRepeatedSequence()
+                .take(it.value.weight)
+                .asIterable()
+    }
     return methodList[floor(Math.random() * methodList.size).toInt()]
+}
+
+internal inline fun <T> Array<T>.asRepeatedSequence() =
+        generateSequence(0) { (it + 1) % this.size }.map(this::get)
+
+internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T {
+    var prev = seed
+    for (index in 0 until times) {
+        prev = action(prev)
+        if (prev == null) {
+            return prev
+        }
+    }
+    return prev
 }
 
 class RoboTest(private val config: RoboConfig) {
@@ -47,31 +65,31 @@ class RoboTest(private val config: RoboConfig) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun run(start: String, count: Int = 1000) {
-        var currentPage = pages[start]
-        repeat(count) {
+        repeatWithVal(count, pages[start]) { currentPage ->
             if (currentPage == null) {
                 Log.e(TAG, "Wound up on a null page. Stopping test.")
                 return
             }
 
-            val currentPageName = currentPage!!.javaClass.simpleName
+            val currentPageName = currentPage.javaClass.simpleName
 
             val methods = config.getPage(currentPageName)?.methods
                     ?: error("Page $currentPageName not found")
             val selected = selectMethod(methods)
 
             // TODO: Handle method overloading.
-            val next = currentPage!!.javaClass.methods.find { it.name == selected }
+            val next = currentPage.javaClass.methods.find { it.name == selected }
                     ?: error("Couldn't find $currentPageName.$selected")
             val args = generateArgs(methods.getValue(selected).params)
 
             try {
                 Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
-                currentPage = next(currentPage, *args)
+                next(currentPage, *args)
             } catch (err: InvocationTargetException) {
                 // TODO: Collect information about test state during errors.
                 System.err.println(err.targetException.message)
                 err.targetException.printStackTrace()
+                currentPage
             }
         }
     }

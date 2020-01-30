@@ -23,7 +23,7 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
     visited.add(target)
 
     val model = Model(
-            methods = Arrays.stream(target.declaredMethods)
+            methods = target.declaredMethods.asSequence()
                     .filter { it.modifiers and Modifier.PUBLIC != 0 }
                     .filter { it.modifiers and Modifier.STATIC == 0 }
                     .map { m ->
@@ -39,11 +39,7 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
 
                         m.name to method
                     }
-                    .collect<HashMap<String, Model.Method>>(
-                            ::HashMap,
-                            { m, (name, method) -> m[name] = method },
-                            { obj, m -> obj.putAll(m) }
-                    )
+                    .toMap()
     )
 
     models[target.simpleName] = model
