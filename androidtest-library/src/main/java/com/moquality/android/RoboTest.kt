@@ -9,14 +9,12 @@ const val TAG = "MQ ROBO"
 internal fun generateArgs(params: Array<Model.Method.Param>) = params.map {
     if (it.valid != null && it.valid!!.isNotEmpty()) {
         val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
-        return@map when (it.type) {
-            "int" -> (v as Double).toInt()
-            else -> v
-        }
+        return@map v
     }
 
     when (it.type) {
-        "int" -> (Math.random() * 10000).toInt()
+        "int", "long", "short", "double", "float" -> Math.random() * 10000
+        "byte", "char" -> Math.random() * 256
         "java.lang.String" -> toPrintable(
                 ByteArray((Math.random() * 512).toInt()) {
                     floor(Math.random() * 256).toByte()
@@ -76,6 +74,15 @@ class RoboTest(private val config: RoboConfig) {
             val next = currentPage.javaClass.methods.find { it.name == selected }
                     ?: error("Couldn't find $currentPageName.$selected")
             val args = generateArgs(methods.getValue(selected).params)
+                    .mapIndexed { i, v ->
+                        val type = methods.getValue(selected).params[i].type
+                        when (type) {
+                            "int", "long", "short", "double", "float", "char", "byte" ->
+                                v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
+                            else -> v
+                        }
+                    }
+                    .toTypedArray()
 
             try {
                 Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
