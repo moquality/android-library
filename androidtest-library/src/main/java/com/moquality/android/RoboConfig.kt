@@ -3,9 +3,6 @@ package com.moquality.android
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Modifier
-import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.math.floor
 
 fun genModels(target: Class<*>): Map<String, Model> {
@@ -55,21 +52,49 @@ class RoboConfig {
         pages.putAll(gson.fromJson(config, object : TypeToken<HashMap<String, Model>>() {}.type))
     }
 
-    fun getPage(name: String) = pages[name]
     fun hasPage(name: String) = pages.containsKey(name)
+    fun getPage(name: String) = pages[name]
 }
 
 internal fun Map<String, Model.Method>.select(config: RoboConfig): String {
     var totalLen = 0
     val methodList = this.entries.asSequence()
-            .filter { (name, method) -> config.hasPage(method.returns) }
-            .flatMap {
-                totalLen += it.value.weight
-                arrayOf(it.key).asRepeatedSequence()
-                        .take(it.value.weight)
+            .filter { (_, method) -> config.hasPage(method.returns) }
+            .flatMap { (name, method) ->
+                totalLen += method.weight
+                arrayOf(name).asRepeatedSequence()
+                        .take(method.weight)
             }.toCollection(ArrayList(totalLen))
     return methodList[floor(Math.random() * methodList.size).toInt()]
 }
+
+internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
+        .map {
+            val validValues = it.valid
+            if (validValues != null && validValues.isNotEmpty()) {
+                return@map validValues[floor(Math.random() * validValues.size).toInt()]
+            }
+
+            @Suppress("IMPLICIT_CAST_TO_ANY")
+            when (it.type) {
+                "int", "long", "short", "double", "float" -> Math.random() * 10000
+                "byte", "char" -> Math.random() * 256
+                "java.lang.String" -> toPrintable(
+                        ByteArray((Math.random() * 512).toInt()) {
+                            floor(Math.random() * 256).toByte()
+                        })
+
+                else -> error("Unknown argument type: $it")
+            }
+        }
+        .mapIndexed { i, v ->
+            when (val type = this[i].type) {
+                "int", "long", "short", "double", "float", "char", "byte" ->
+                    v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
+                else -> v
+            }
+        }
+        .toCollection(ArrayList(this.size))
 
 data class Model(var methods: Map<String, Method>) {
     data class Method(var params: Array<Param>, var returns: String, var weight: Int = 1) {

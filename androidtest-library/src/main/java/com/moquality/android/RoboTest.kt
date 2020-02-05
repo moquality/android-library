@@ -2,41 +2,14 @@ package com.moquality.android
 
 import android.util.Log
 import java.lang.reflect.InvocationTargetException
-import kotlin.math.floor
 
 const val TAG = "MQ ROBO"
 
-internal fun generateArgs(params: Array<Model.Method.Param>) = params
-        .map {
-            if (it.valid != null && it.valid!!.isNotEmpty()) {
-                val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
-                return@map v
-            }
+internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
+        .map { ((it % (126 - 32)) + 32).toChar() }
+        .joinToString("")
 
-            when (it.type) {
-                "int", "long", "short", "double", "float" -> Math.random() * 10000
-                "byte", "char" -> Math.random() * 256
-                "java.lang.String" -> toPrintable(
-                        ByteArray((Math.random() * 512).toInt()) {
-                            floor(Math.random() * 256).toByte()
-                        })
-
-                else -> error("Unknown argument type: $it")
-            }
-        }
-        .mapIndexed { i, v ->
-            val type = params[i].type
-            when (type) {
-                "int", "long", "short", "double", "float", "char", "byte" ->
-                    v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
-                else -> v
-            }
-        }
-        .toTypedArray()
-
-internal fun toPrintable(bytes: ByteArray) = bytes.asSequence().map { ((it % (126 - 32)) + 32).toChar() }.joinToString("")
-
-internal inline fun <T> Array<T>.asRepeatedSequence() =
+internal fun <T> Array<T>.asRepeatedSequence() =
         generateSequence(0) { (it + 1) % this.size }.map(this::get)
 
 internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T {
@@ -54,13 +27,13 @@ class RoboTest(private val config: RoboConfig) {
         val pages = hashMapOf(start.javaClass.name to start)
 
         repeatWithVal(count, start.javaClass.name) { currentPageName ->
-            val currentPage = try {
-                pages[currentPageName]
-                        ?: classLoader.loadClass(currentPageName).getConstructor().newInstance()
-            } catch (err: Exception) {
-                Log.e(TAG, "Unable to find or create an instance of $currentPageName. Stopping test.")
-                return
-            }
+            val currentPage = pages[currentPageName]
+                    ?: try {
+                        classLoader.loadClass(currentPageName).getConstructor().newInstance()
+                    } catch (err: Exception) {
+                        Log.e(TAG, "Unable to find or create an instance of $currentPageName. Stopping test.")
+                        return
+                    }
 
             val methods = config.getPage(currentPageName)?.methods
                     ?: error("Page $currentPageName not found")
@@ -69,7 +42,7 @@ class RoboTest(private val config: RoboConfig) {
             // TODO: Handle method overloading.
             val next = currentPage.javaClass.methods.find { it.name == selected }
                     ?: error("Couldn't find $currentPageName.$selected")
-            val args = generateArgs(methods.getValue(selected).params)
+            val args = methods.getValue(selected).params.toArgumentList().toTypedArray()
 
             try {
                 Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
