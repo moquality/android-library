@@ -4,7 +4,9 @@ import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Modifier
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.math.floor
 
 fun genModels(target: Class<*>): Map<String, Model> {
     val models = java.util.HashMap<String, Model>()
@@ -26,7 +28,7 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
                         val method = Model.Method(
                                 params = m.parameterTypes.map { Model.Method.Param(type = it.name) }.toTypedArray(),
 
-                                returns = m.returnType.simpleName
+                                returns = m.returnType.name
                         )
 
                         genModels(models, m.returnType, visited)
@@ -36,7 +38,7 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
                     .toMap()
     )
 
-    models[target.simpleName] = model
+    models[target.name] = model
 }
 
 class RoboConfig {
@@ -53,7 +55,20 @@ class RoboConfig {
         pages.putAll(gson.fromJson(config, object : TypeToken<HashMap<String, Model>>() {}.type))
     }
 
-    fun getPage(name: String): Model? = pages[name]
+    fun getPage(name: String) = pages[name]
+    fun hasPage(name: String) = pages.containsKey(name)
+}
+
+internal fun Map<String, Model.Method>.select(config: RoboConfig): String {
+    var totalLen = 0
+    val methodList = this.entries.asSequence()
+            .filter { (name, method) -> config.hasPage(method.returns) }
+            .flatMap {
+                totalLen += it.value.weight
+                arrayOf(it.key).asRepeatedSequence()
+                        .take(it.value.weight)
+            }.toCollection(ArrayList(totalLen))
+    return methodList[floor(Math.random() * methodList.size).toInt()]
 }
 
 data class Model(var methods: Map<String, Method>) {

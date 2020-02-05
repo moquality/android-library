@@ -6,34 +6,35 @@ import kotlin.math.floor
 
 const val TAG = "MQ ROBO"
 
-internal fun generateArgs(params: Array<Model.Method.Param>) = params.map {
-    if (it.valid != null && it.valid!!.isNotEmpty()) {
-        val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
-        return@map v
-    }
+internal fun generateArgs(params: Array<Model.Method.Param>) = params
+        .map {
+            if (it.valid != null && it.valid!!.isNotEmpty()) {
+                val v = it.valid!![floor(Math.random() * it.valid!!.size).toInt()]
+                return@map v
+            }
 
-    when (it.type) {
-        "int", "long", "short", "double", "float" -> Math.random() * 10000
-        "byte", "char" -> Math.random() * 256
-        "java.lang.String" -> toPrintable(
-                ByteArray((Math.random() * 512).toInt()) {
-                    floor(Math.random() * 256).toByte()
-                })
+            when (it.type) {
+                "int", "long", "short", "double", "float" -> Math.random() * 10000
+                "byte", "char" -> Math.random() * 256
+                "java.lang.String" -> toPrintable(
+                        ByteArray((Math.random() * 512).toInt()) {
+                            floor(Math.random() * 256).toByte()
+                        })
 
-        else -> error("Unknown argument type: $it")
-    }
-}.toTypedArray()
+                else -> error("Unknown argument type: $it")
+            }
+        }
+        .mapIndexed { i, v ->
+            val type = params[i].type
+            when (type) {
+                "int", "long", "short", "double", "float", "char", "byte" ->
+                    v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
+                else -> v
+            }
+        }
+        .toTypedArray()
 
 internal fun toPrintable(bytes: ByteArray) = bytes.asSequence().map { ((it % (126 - 32)) + 32).toChar() }.joinToString("")
-
-internal fun selectMethod(methods: Map<String, Model.Method>): String {
-    val methodList = methods.entries.flatMap {
-        arrayOf(it.key).asRepeatedSequence()
-                .take(it.value.weight)
-                .asIterable()
-    }
-    return methodList[floor(Math.random() * methodList.size).toInt()]
-}
 
 internal inline fun <T> Array<T>.asRepeatedSequence() =
         generateSequence(0) { (it + 1) % this.size }.map(this::get)
@@ -42,56 +43,50 @@ internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T 
     var prev = seed
     for (index in 0 until times) {
         prev = action(prev)
-        if (prev == null) {
-            return prev
-        }
     }
     return prev
 }
 
 class RoboTest(private val config: RoboConfig) {
-    private val pages = HashMap<String, Any>()
+    private val classLoader = javaClass.classLoader!!
 
-    fun registerPageObject(obj: Any): RoboTest {
-        pages[obj.javaClass.simpleName] = obj
-        return this
-    }
+    fun run(start: Any, count: Int = 1000) {
+        val pages = hashMapOf(start.javaClass.name to start)
 
-    fun run(start: String, count: Int = 1000) {
-        repeatWithVal(count, pages[start]) { currentPage ->
-            if (currentPage == null) {
-                Log.e(TAG, "Wound up on a null page. Stopping test.")
+        repeatWithVal(count, start.javaClass.name) { currentPageName ->
+            val currentPage = try {
+                pages[currentPageName]
+                        ?: classLoader.loadClass(currentPageName).getConstructor().newInstance()
+            } catch (err: Exception) {
+                Log.e(TAG, "Unable to find or create an instance of $currentPageName. Stopping test.")
                 return
             }
 
-            val currentPageName = currentPage.javaClass.simpleName
-
             val methods = config.getPage(currentPageName)?.methods
                     ?: error("Page $currentPageName not found")
-            val selected = selectMethod(methods)
+            val selected = methods.select(config)
 
             // TODO: Handle method overloading.
             val next = currentPage.javaClass.methods.find { it.name == selected }
                     ?: error("Couldn't find $currentPageName.$selected")
             val args = generateArgs(methods.getValue(selected).params)
-                    .mapIndexed { i, v ->
-                        val type = methods.getValue(selected).params[i].type
-                        when (type) {
-                            "int", "long", "short", "double", "float", "char", "byte" ->
-                                v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
-                            else -> v
-                        }
-                    }
-                    .toTypedArray()
 
             try {
                 Log.i(TAG, "Calling ${next.name}(${args.joinToString(", ")})")
-                next(currentPage, *args)
+
+                val nextPage = next(currentPage, *args)
+                if (nextPage == null) {
+                    Log.e(TAG, "Nothing returned from ${next.name}. Stopping test.")
+                    return
+                }
+
+                pages[nextPage.javaClass.name] = nextPage
+                nextPage.javaClass.name
             } catch (err: InvocationTargetException) {
                 // TODO: Collect information about test state during errors.
                 System.err.println(err.targetException.message)
                 err.targetException.printStackTrace()
-                currentPage
+                currentPageName
             }
         }
     }
