@@ -83,6 +83,7 @@ internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
                         ByteArray((Math.random() * 512).toInt()) {
                             floor(Math.random() * 256).toByte()
                         })
+                "boolean" -> Math.random() > .5
 
                 else -> error("Unknown argument type: $it")
             }
