@@ -7,7 +7,7 @@ import kotlin.math.floor
 
 fun genModels(target: Class<*>): Map<String, Model> {
     val models = java.util.HashMap<String, Model>()
-    genModels(models, target, HashSet())
+    genModels(models, target, hashSetOf(Any::class.java))
     return models
 }
 
@@ -59,7 +59,7 @@ class RoboConfig {
 internal fun Map<String, Model.Method>.select(config: RoboConfig): String {
     var totalLen = 0
     val methodList = this.entries.asSequence()
-            .filter { (_, method) -> config.hasPage(method.returns) }
+            .filter { (_, method) -> method.returns == "generic" || config.hasPage(method.returns) }
             .flatMap { (name, method) ->
                 totalLen += method.weight
                 arrayOf(name).asRepeatedSequence()
