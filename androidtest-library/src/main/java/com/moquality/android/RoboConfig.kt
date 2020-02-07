@@ -98,7 +98,7 @@ internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
         .toCollection(ArrayList(this.size))
 
 data class Model(var methods: Map<String, Method>) {
-    data class Method(var params: Array<Param>, var returns: String, var weight: Int = 1) {
+    data class Method(var params: Array<Param>, var returns: String, var weight: Int = 1, var after: String? = null) {
         data class Param(var type: String, var valid: Array<Any>? = null)
     }
 }

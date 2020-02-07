@@ -25,6 +25,7 @@ class RoboTest(private val config: RoboConfig) {
 
     fun run(start: Any, count: Int = 1000) {
         val pages = hashMapOf(start.javaClass.name to start)
+        var after: String? = null
 
         repeatWithVal(count, start.javaClass.name) { currentPageName ->
             val currentPage = pages[currentPageName]
@@ -37,7 +38,7 @@ class RoboTest(private val config: RoboConfig) {
 
             val methods = config.getPage(currentPageName)?.methods
                     ?: error("Page $currentPageName not found")
-            val selected = methods.select(config)
+            val selected = after ?: methods.select(config)
 
             // TODO: Handle method overloading.
             val next = currentPage.javaClass.methods.find { it.name == selected }
@@ -54,11 +55,16 @@ class RoboTest(private val config: RoboConfig) {
                 }
 
                 pages[nextPage.javaClass.name] = nextPage
+                after = methods.getValue(selected).after
+
                 nextPage.javaClass.name
             } catch (err: InvocationTargetException) {
                 // TODO: Collect information about test state during errors.
                 System.err.println(err.targetException.message)
                 err.targetException.printStackTrace()
+
+                after = null
+
                 currentPageName
             }
         }
