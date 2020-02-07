@@ -68,6 +68,9 @@ internal fun Map<String, Model.Method>.select(config: RoboConfig): String {
     return methodList[floor(Math.random() * methodList.size).toInt()]
 }
 
+/**
+ * toArgumentList creates an equivalent list of argument values.
+ */
 internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
         .map {
             val validValues = it.valid

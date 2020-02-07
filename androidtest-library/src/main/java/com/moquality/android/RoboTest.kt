@@ -54,10 +54,15 @@ class RoboTest(private val config: RoboConfig) {
                     return
                 }
 
-                pages[nextPage.javaClass.name] = nextPage
+                val returnName = when (val returnName = methods.getValue(selected).returns) {
+                    "generic" -> "<${nextPage.javaClass.name}>"
+                    else -> returnName
+                }
+
+                pages[returnName] = nextPage
                 after = methods.getValue(selected).after
 
-                nextPage.javaClass.name
+                returnName
             } catch (err: InvocationTargetException) {
                 // TODO: Collect information about test state during errors.
                 System.err.println(err.targetException.message)
