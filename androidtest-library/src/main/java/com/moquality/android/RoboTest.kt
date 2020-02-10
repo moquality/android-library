@@ -21,20 +21,11 @@ internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T 
 }
 
 class RoboTest(private val config: RoboConfig) {
-    private val classLoader = javaClass.classLoader!!
-
     fun run(start: Any, count: Int = 1000) {
-        val pages = hashMapOf(start.javaClass.name to start)
         var after: String? = null
 
-        repeatWithVal(count, start.javaClass.name) { currentPageName ->
-            val currentPage = pages[currentPageName]
-                    ?: try {
-                        classLoader.loadClass(currentPageName).getConstructor().newInstance()
-                    } catch (err: Exception) {
-                        Log.e(TAG, "Unable to find or create an instance of $currentPageName. Stopping test.")
-                        return
-                    }
+        repeatWithVal(count, start) { currentPage ->
+            val currentPageName = currentPage.javaClass.name
 
             val methods = config.getPage(currentPageName)?.methods
                     ?: error("Page $currentPageName not found")
@@ -54,15 +45,9 @@ class RoboTest(private val config: RoboConfig) {
                     return
                 }
 
-                val returnName = when (val returnName = methods.getValue(selected).returns) {
-                    "generic" -> "<${nextPage.javaClass.name}>"
-                    else -> returnName
-                }
-
-                pages[returnName] = nextPage
                 after = methods.getValue(selected).after
 
-                returnName
+                nextPage
             } catch (err: InvocationTargetException) {
                 // TODO: Collect information about test state during errors.
                 System.err.println(err.targetException.message)
@@ -70,7 +55,7 @@ class RoboTest(private val config: RoboConfig) {
 
                 after = null
 
-                currentPageName
+                currentPage
             }
         }
     }
