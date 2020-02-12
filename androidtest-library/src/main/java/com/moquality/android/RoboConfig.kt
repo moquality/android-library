@@ -25,10 +25,16 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
                         val method = Model.Method(
                                 params = m.parameterTypes.map { Model.Method.Param(type = it.name) }.toTypedArray(),
 
-                                returns = m.returnType.name
+                                returns = if (m.returnType.name != "java.lang.Object") {
+                                    m.returnType.name
+                                } else {
+                                    "generic"
+                                }
                         )
 
-                        genModels(models, m.returnType, visited)
+                        if (m.returnType.name != "java.lang.Object") {
+                            genModels(models, m.returnType, visited)
+                        }
 
                         m.name to method
                     }
