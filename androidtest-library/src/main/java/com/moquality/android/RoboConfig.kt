@@ -5,13 +5,18 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Modifier
 import kotlin.math.floor
 
-fun genModels(target: Class<*>): Map<String, Model> {
+fun genModels(target: Class<*>, whitelist: Set<Class<*>>? = null): Map<String, Model> {
     val models = java.util.HashMap<String, Model>()
-    genModels(models, target, hashSetOf(Any::class.java))
+    genModels(models, target, hashSetOf(Any::class.java), whitelist?.run {
+        if (contains(target)) {
+            return@run this
+        }
+        this.toMutableSet().apply { add(target) }
+    })
     return models
 }
 
-fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: MutableSet<Class<*>>) {
+fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: MutableSet<Class<*>>, whitelist: Set<Class<*>>? = null) {
     if (visited.contains(target)) {
         return
     }
@@ -21,20 +26,19 @@ fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: Muta
             methods = target.declaredMethods.asSequence()
                     .filter { it.modifiers and Modifier.PUBLIC != 0 }
                     .filter { it.modifiers and Modifier.STATIC == 0 }
+                    .filter { whitelist?.contains(it.returnType) != false }
                     .map { m ->
                         val method = Model.Method(
                                 params = m.parameterTypes.map { Model.Method.Param(type = it.name) }.toTypedArray(),
 
-                                returns = if (m.returnType.name != "java.lang.Object") {
+                                returns = if (m.returnType.name != Any::class.java.name) {
                                     m.returnType.name
                                 } else {
                                     "generic"
                                 }
                         )
 
-                        if (m.returnType.name != "java.lang.Object") {
-                            genModels(models, m.returnType, visited)
-                        }
+                        genModels(models, m.returnType, visited, whitelist)
 
                         m.name to method
                     }
