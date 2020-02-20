@@ -17,8 +17,8 @@ internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T 
 }
 
 class RoboTest(private val config: RoboConfig) {
-    fun run(start: Any, count: Int = 1000) {
-        repeatWithVal(count, start to RoboState(null, start.javaClass)) { (currentPage, state) ->
+    fun run(start: Any, count: Int = 1000): RoboState {
+        val (_, state) = repeatWithVal(count, start to RoboState(null, start.javaClass)) { (currentPage, state) ->
             val methods = config.validMethods(state)
             val selected = config.selectMethod(state, methods)
             val args = config.generateArguments(state, selected)
@@ -29,7 +29,7 @@ class RoboTest(private val config: RoboConfig) {
                 val nextPage = selected(currentPage, *args.toTypedArray())
                 if (nextPage == null) {
                     Log.e(TAG, "Nothing returned from ${selected.name}. Stopping test.")
-                    return
+                    return state
                 }
 
                 nextPage to RoboState(state, nextPage.javaClass, selected)
@@ -38,8 +38,10 @@ class RoboTest(private val config: RoboConfig) {
                 System.err.println(err.targetException.message)
                 err.targetException.printStackTrace()
 
-                currentPage to RoboState(state, currentPage.javaClass, selected, err)
+                currentPage to RoboState(state, currentPage.javaClass, selected, err.targetException)
             }
         }
+
+        return state
     }
 }

@@ -39,4 +39,4 @@ internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
         .map { ((it % (126 - 32)) + 32).toChar() }
         .joinToString("")
 
-data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val method: Method? = null, val error: Exception? = null)
+data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val method: Method? = null, val error: Throwable? = null)
