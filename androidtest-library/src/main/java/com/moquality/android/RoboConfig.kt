@@ -1,97 +1,26 @@
 package com.moquality.android
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.math.floor
 
-fun genModels(target: Class<*>, whitelist: Set<Class<*>>? = null): Map<String, Model> {
-    val models = java.util.HashMap<String, Model>()
-    genModels(models, target, hashSetOf(Any::class.java), whitelist?.run {
-        if (contains(target)) {
-            return@run this
-        }
-        this.toMutableSet().apply { add(target) }
-    })
-    return models
+interface RoboConfig {
+    fun validMethods(state: RoboState): List<out Method> = state.currentPage.declaredMethods.asSequence()
+            .filter { it.modifiers and Modifier.PUBLIC != 0 }
+            .filter { it.modifiers and Modifier.STATIC == 0 }
+            .filter { !it.name.startsWith("assert") && !it.name.startsWith("waitFor") && !it.name.startsWith("expect") }
+            .toList()
+
+    fun selectMethod(state: RoboState, valid: List<Method>): Method = valid.random()
+
+    fun generateArguments(state: RoboState, method: Method): List<out Any> = method.generateArguments()
 }
 
-fun genModels(models: MutableMap<String, Model>, target: Class<*>, visited: MutableSet<Class<*>>, whitelist: Set<Class<*>>? = null) {
-    if (visited.contains(target)) {
-        return
-    }
-    visited.add(target)
-
-    val model = Model(
-            methods = target.declaredMethods.asSequence()
-                    .filter { it.modifiers and Modifier.PUBLIC != 0 }
-                    .filter { it.modifiers and Modifier.STATIC == 0 }
-                    .filter { whitelist?.contains(it.returnType) != false }
-                    .map { m ->
-                        val method = Model.Method(
-                                params = m.parameterTypes.map { Model.Method.Param(type = it.name) }.toTypedArray(),
-
-                                returns = if (m.returnType.name != Any::class.java.name) {
-                                    m.returnType.name
-                                } else {
-                                    "generic"
-                                }
-                        )
-
-                        genModels(models, m.returnType, visited, whitelist)
-
-                        m.name to method
-                    }
-                    .toMap()
-    )
-
-    models[target.name] = model
-}
-
-class RoboConfig {
-    private val pages: MutableMap<String, Model>
-
-    constructor(pages: Map<String, Model>) {
-        this.pages = pages.toMutableMap()
-    }
-
-    constructor(config: String) : this(HashMap()) {
-        val gson = GsonBuilder().run {
-            setPrettyPrinting()
-        }.create()
-        pages.putAll(gson.fromJson(config, object : TypeToken<HashMap<String, Model>>() {}.type))
-    }
-
-    fun hasPage(name: String) = pages.containsKey(name)
-    fun getPage(name: String) = pages[name]
-}
-
-internal fun Map<String, Model.Method>.select(config: RoboConfig): String {
-    var totalLen = 0
-    val methodList = this.entries.asSequence()
-            .filter { (_, method) -> method.returns == "generic" || config.hasPage(method.returns) }
-            .flatMap { (name, method) ->
-                totalLen += method.weight
-                arrayOf(name).asRepeatedSequence()
-                        .take(method.weight)
-            }.toCollection(ArrayList(totalLen))
-    return methodList[floor(Math.random() * methodList.size).toInt()]
-}
-
-/**
- * toArgumentList creates an equivalent list of argument values.
- */
-internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
+internal fun Method.generateArguments() = this.parameterTypes.asSequence()
         .map {
-            val validValues = it.valid
-            if (validValues != null && validValues.isNotEmpty()) {
-                return@map validValues[floor(Math.random() * validValues.size).toInt()]
-            }
-
-            @Suppress("IMPLICIT_CAST_TO_ANY")
-            when (it.type) {
-                "int", "long", "short", "double", "float" -> Math.random() * 10000
-                "byte", "char" -> Math.random() * 256
+            when (it.name) {
+                "int", "long", "short", "double", "float" -> fixNumber(it.name, Math.random() * 10000)
+                "byte", "char" -> fixNumber(it.name, Math.random() * 256)
                 "java.lang.String" -> toPrintable(
                         ByteArray((Math.random() * 512).toInt()) {
                             floor(Math.random() * 256).toByte()
@@ -101,17 +30,13 @@ internal fun Array<Model.Method.Param>.toArgumentList() = this.asSequence()
                 else -> error("Unknown argument type: $it")
             }
         }
-        .mapIndexed { i, v ->
-            when (val type = this[i].type) {
-                "int", "long", "short", "double", "float", "char", "byte" ->
-                    v.javaClass.methods.find { it.name == "${type}Value" }?.invoke(v)
-                else -> v
-            }
-        }
-        .toCollection(ArrayList(this.size))
+        .toCollection(ArrayList(this.parameterTypes.size))
 
-data class Model(var methods: Map<String, Method>) {
-    data class Method(var params: Array<Param>, var returns: String, var weight: Int = 1, var after: String? = null) {
-        data class Param(var type: String, var valid: Array<Any>? = null)
-    }
-}
+fun fixNumber(type: String, gen: Double) = gen.javaClass.methods.find { it.name == "${type}Value" }?.invoke(gen)
+        ?: error("Couldn't fix number: $type")
+
+internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
+        .map { ((it % (126 - 32)) + 32).toChar() }
+        .joinToString("")
+
+data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val method: Method? = null, val error: Exception? = null)
