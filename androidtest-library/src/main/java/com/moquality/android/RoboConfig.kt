@@ -5,7 +5,7 @@ import java.lang.reflect.Modifier
 import kotlin.math.floor
 
 interface RoboConfig {
-    fun validMethods(state: RoboState): List<out Method> = state.currentPage.declaredMethods.asSequence()
+    fun validMethods(state: RoboState): List<Method> = state.currentPage.declaredMethods.asSequence()
             .filter { it.modifiers and Modifier.PUBLIC != 0 }
             .filter { it.modifiers and Modifier.STATIC == 0 }
             .filter { !it.name.startsWith("assert") && !it.name.startsWith("waitFor") && !it.name.startsWith("expect") }
@@ -13,7 +13,7 @@ interface RoboConfig {
 
     fun selectMethod(state: RoboState, valid: List<Method>): Method = valid.random()
 
-    fun generateArguments(state: RoboState, method: Method): List<out Any> = method.generateArguments()
+    fun generateArguments(state: RoboState, method: Method): List<Any> = method.generateArguments()
 }
 
 internal fun Method.generateArguments() = this.parameterTypes.asSequence()
@@ -39,4 +39,16 @@ internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
         .map { ((it % (126 - 32)) + 32).toChar() }
         .joinToString("")
 
-data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val method: Method? = null, val error: Throwable? = null)
+data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val method: Method? = null, val args: List<Any> = emptyList(), val error: Throwable? = null) {
+    val originMethodCall = if (previous != null) {
+        "${previous.currentPage.simpleName}.${method?.name}(${args.joinToString(", ")})"
+    } else {
+        null
+    }
+
+    val errorInfo = if (error != null) {
+            "${originMethodCall}: ${error.localizedMessage?.substringBefore("\n")}"
+        } else {
+            null
+        }
+}

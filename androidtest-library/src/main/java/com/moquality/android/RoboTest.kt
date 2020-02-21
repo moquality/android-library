@@ -32,13 +32,9 @@ class RoboTest(private val config: RoboConfig) {
                     return state
                 }
 
-                nextPage to RoboState(state, nextPage.javaClass, selected)
+                nextPage to RoboState(state, nextPage.javaClass, selected, args)
             } catch (err: InvocationTargetException) {
-                // TODO: Collect information about test state during errors.
-                System.err.println(err.targetException.message)
-                err.targetException.printStackTrace()
-
-                currentPage to RoboState(state, currentPage.javaClass, selected, err.targetException)
+                currentPage to RoboState(state, currentPage.javaClass, selected, args, err.targetException)
             }
         }
 
