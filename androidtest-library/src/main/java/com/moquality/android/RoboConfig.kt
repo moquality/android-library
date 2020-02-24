@@ -18,8 +18,8 @@ interface RoboConfig {
 internal fun Method.generateArguments() = this.parameterTypes.asSequence()
         .map {
             when (it.name) {
-                "int", "long", "short", "double", "float" -> ((Math.random() * 10000) as java.lang.Double).toType(it.name)
-                "byte", "char" -> ((Math.random() * 256) as java.lang.Double).toType(it.name)
+                "int", "long", "short", "double", "float" -> ((Math.random() * 10000) as java.lang.Double).toNumberType(it.name)
+                "byte", "char" -> ((Math.random() * 256) as java.lang.Double).toNumberType(it.name)
                 "java.lang.String" -> toPrintable(
                         ByteArray((Math.random() * 512).toInt()) {
                             floor(Math.random() * 256).toByte()
@@ -31,8 +31,8 @@ internal fun Method.generateArguments() = this.parameterTypes.asSequence()
         }
         .toCollection(ArrayList(this.parameterTypes.size))
 
-internal fun java.lang.Double.toType(type: String) = this.javaClass.methods.find { it.name == "${type}Value" }?.invoke(this)
-        ?: error("Couldn't fix number: $type")
+internal fun java.lang.Double.toNumberType(type: String) = this.javaClass.methods.find { it.name == "${type}Value" }?.invoke(this)
+        ?: error("Couldn't convert number: $type")
 
 internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
         .map { ((it % (126 - 32)) + 32).toChar() }
