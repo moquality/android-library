@@ -45,16 +45,20 @@ data class RoboState(
         val args: List<Any> = emptyList(),
         val error: Throwable? = null
 ) {
-    val originMethodCall = if (previous != null) {
-        "${previous.currentPage.simpleName}.${method?.name}(${args.joinToString(", ")})"
-    } else {
-        null
+    val originMethodCall by lazy {
+        if (previous != null) {
+            "${previous.currentPage.simpleName}.${method?.name}(${args.joinToString(", ")})"
+        } else {
+            null
+        }
     }
 
-    val errorInfo = if (error != null) {
-        "${originMethodCall}: ${error.localizedMessage?.substringBefore("\n")}"
-    } else {
-        null
+    val errorInfo by lazy {
+        if (error != null) {
+            "${originMethodCall}: ${error.localizedMessage?.substringBefore("\n")}"
+        } else {
+            null
+        }
     }
 
     fun printStackTrace(size: Int = 10, out: PrintStream = System.err) {
