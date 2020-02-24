@@ -1,5 +1,6 @@
 package com.moquality.android
 
+import java.io.PrintStream
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import kotlin.math.floor
@@ -49,4 +50,13 @@ data class RoboState(val previous: RoboState?, val currentPage: Class<*>, val me
         } else {
             null
         }
+
+    fun printStackTrace(size: Int = 10, out: PrintStream = System.err) {
+        if (size == 0) {
+            return
+        }
+
+        out.println(errorInfo ?: originMethodCall)
+        previous?.printStackTrace(size - 1, out)
+    }
 }
