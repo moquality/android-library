@@ -9,6 +9,7 @@ interface RoboConfig {
             .filter { it.modifiers and Modifier.PUBLIC != 0 }
             .filter { it.modifiers and Modifier.STATIC == 0 }
             .filter { !it.name.startsWith("assert") && !it.name.startsWith("waitFor") && !it.name.startsWith("expect") }
+            .toList()
 
     fun generateArguments(state: RoboState, method: Method): List<Any> = method.generateArguments()
 }
