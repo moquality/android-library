@@ -19,8 +19,8 @@ internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T 
 class RoboTest(private val config: RoboConfig) {
     fun run(start: Any, count: Int = 1000): RoboState {
         val (_, state) = repeatWithVal(count, start to RoboState(null, start.javaClass)) { (currentPage, state) ->
-            val methods = config.validMethods(state)
-            val selected = config.selectMethod(state, methods)
+            val methods = config.selectMethods(state)
+            val selected = methods.random() // TODO: Pick a method properly.
             val args = config.generateArguments(state, selected)
 
             try {

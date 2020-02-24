@@ -5,13 +5,10 @@ import java.lang.reflect.Modifier
 import kotlin.math.floor
 
 interface RoboConfig {
-    fun validMethods(state: RoboState): List<Method> = state.currentPage.declaredMethods.asSequence()
+    fun selectMethods(state: RoboState): List<Method> = state.currentPage.declaredMethods.asSequence()
             .filter { it.modifiers and Modifier.PUBLIC != 0 }
             .filter { it.modifiers and Modifier.STATIC == 0 }
             .filter { !it.name.startsWith("assert") && !it.name.startsWith("waitFor") && !it.name.startsWith("expect") }
-            .toList()
-
-    fun selectMethod(state: RoboState, valid: List<Method>): Method = valid.random()
 
     fun generateArguments(state: RoboState, method: Method): List<Any> = method.generateArguments()
 }
