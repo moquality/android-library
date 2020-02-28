@@ -32,9 +32,13 @@ class RoboTest(private val config: RoboConfig) {
                     return state
                 }
 
-                nextPage to RoboState(state, nextPage.javaClass, selected, args)
+                val nextState = RoboState(state, nextPage.javaClass, selected, args)
+                config.onSuccess(nextState)
+                nextPage to nextState
             } catch (err: InvocationTargetException) {
-                currentPage to RoboState(state, currentPage.javaClass, selected, args, err.targetException)
+                val nextState = RoboState(state, currentPage.javaClass, selected, args, err.targetException)
+                config.onError(nextState)
+                currentPage to nextState
             }
         }
 

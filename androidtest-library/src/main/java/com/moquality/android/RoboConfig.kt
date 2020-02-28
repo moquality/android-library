@@ -13,6 +13,9 @@ interface RoboConfig {
             .toHashSet()
 
     fun generateArguments(state: RoboState, method: Method): List<Any> = method.generateArguments()
+
+    fun onSuccess(state: RoboState) {}
+    fun onError(state: RoboState) {}
 }
 
 internal fun Method.generateArguments() = this.parameterTypes.asSequence()
