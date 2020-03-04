@@ -6,16 +6,16 @@ import java.lang.reflect.Modifier
 import kotlin.math.floor
 
 interface RoboConfig {
-    fun selectMethods(state: RoboState): Collection<Method> = state.currentPage.declaredMethods.asSequence()
+    fun selectMethods(state: List<RoboState>, currentPage: Class<*>): Collection<Method> = currentPage.declaredMethods.asSequence()
             .filter { it.modifiers and Modifier.PUBLIC != 0 }
             .filter { it.modifiers and Modifier.STATIC == 0 }
             .filter { !it.name.startsWith("assert") && !it.name.startsWith("waitFor") && !it.name.startsWith("expect") }
             .toHashSet()
 
-    fun generateArguments(state: RoboState, method: Method): List<Any> = method.generateArguments()
+    fun generateArguments(state: List<RoboState>, method: Method): List<Any> = method.generateArguments()
 
-    fun onSuccess(state: RoboState) {}
-    fun onError(state: RoboState) {}
+    fun onSuccess(state: List<RoboState>) {}
+    fun onError(state: List<RoboState>) {}
 }
 
 internal fun Method.generateArguments() = this.parameterTypes.asSequence()
@@ -42,34 +42,27 @@ internal fun toPrintable(bytes: ByteArray) = bytes.asSequence()
         .joinToString("")
 
 data class RoboState(
-        val previous: RoboState?,
-        val currentPage: Class<*>,
-        val method: Method? = null,
-        val args: List<Any> = emptyList(),
-        val error: Throwable? = null
+        val state: Class<*>,
+        val method: Method,
+        val args: List<Any>,
+        val error: Throwable?
 ) {
-    val originMethodCall by lazy {
-        if (previous != null) {
-            "${previous.currentPage.simpleName}.${method?.name}(${args.joinToString(", ")})"
-        } else {
-            null
-        }
+    companion object {
     }
+
+    val methodCall by lazy { "${state.simpleName}.${method.name}(${args.joinToString(", ")})" }
 
     val errorInfo by lazy {
         if (error != null) {
-            "${originMethodCall}: ${error.localizedMessage?.substringBefore("\n")}"
+            "${methodCall}: ${error.localizedMessage?.substringBefore("\n")}"
         } else {
             null
         }
     }
+}
 
-    fun printStackTrace(size: Int = 10, out: PrintStream = System.err) {
-        if (size == 0) {
-            return
-        }
-
-        out.println(errorInfo ?: originMethodCall)
-        previous?.printStackTrace(size - 1, out)
+fun List<RoboState>.printStackTrace(size: Int = 10, out: PrintStream = System.err) {
+    asReversed().subList(0, size).forEach {
+        out.println(it.errorInfo ?: it.methodCall)
     }
 }

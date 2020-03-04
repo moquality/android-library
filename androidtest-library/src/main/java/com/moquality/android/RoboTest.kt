@@ -5,9 +5,6 @@ import java.lang.reflect.InvocationTargetException
 
 const val TAG = "MQ ROBO"
 
-internal fun <T> Array<T>.asRepeatedSequence() =
-        generateSequence(0) { (it + 1) % this.size }.map(this::get)
-
 internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T {
     var prev = seed
     for (index in 0 until times) {
@@ -17,14 +14,15 @@ internal inline fun <T> repeatWithVal(times: Int, seed: T, action: (T) -> T): T 
 }
 
 class RoboTest(private val config: RoboConfig) {
-    fun run(start: Any, count: Int = 1000): RoboState {
-        val (_, state) = repeatWithVal(count, start to RoboState(null, start.javaClass)) { (currentPage, state) ->
-            val methods = config.selectMethods(state)
+    fun run(start: Any, count: Int = 1000): List<RoboState> {
+        val state = mutableListOf<RoboState>()
+        repeatWithVal(count, start) { currentPage ->
+            val methods = config.selectMethods(state, currentPage.javaClass)
             val selected = methods.random() // TODO: Pick a method properly.
             val args = config.generateArguments(state, selected)
 
             try {
-                Log.i(TAG, "Calling ${state.currentPage.name}.${selected.name}(${args.joinToString(", ")})")
+                Log.i(TAG, "Calling ${currentPage.javaClass.simpleName}.${selected.name}(${args.joinToString(", ")})")
 
                 val nextPage = selected(currentPage, *args.toTypedArray())
                 if (nextPage == null) {
@@ -32,13 +30,15 @@ class RoboTest(private val config: RoboConfig) {
                     return state
                 }
 
-                val nextState = RoboState(state, nextPage.javaClass, selected, args)
-                config.onSuccess(nextState)
-                nextPage to nextState
+                state.add(RoboState(currentPage.javaClass, selected, args, null))
+                config.onSuccess(state)
+
+                nextPage
             } catch (err: InvocationTargetException) {
-                val nextState = RoboState(state, currentPage.javaClass, selected, args, err.targetException)
-                config.onError(nextState)
-                currentPage to nextState
+                state.add(RoboState(currentPage.javaClass, selected, args, err.targetException))
+                config.onError(state)
+
+                currentPage
             }
         }
 
